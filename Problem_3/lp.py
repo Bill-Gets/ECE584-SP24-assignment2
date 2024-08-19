@@ -48,8 +48,9 @@ class Verifier:
             # TODO : Append to x_vars - a list of variable having lower and upper bounds
             # TODO : Hint - Use .addVar in gurobipy
             # YOUR CODE HERE
-            # self.x_vars.append(self.gurobi_model.addVar(...))
-            pass
+            lower_bound = x_test[i] - perturbation
+            upper_bound = x_test[i] + perturbation
+            self.x_vars.append(self.gurobi_model.addVar(lb = lower_bound, ub = upper_bound))
         self.gurobi_model.update()
         print(f"Created {len(self.x_vars)} input variables")
         return self.x_vars
@@ -77,8 +78,10 @@ class Verifier:
         self.gurobi_model.update()
         # TODO : Add constraints for variable z representing the output of the layer before activation i.e. wx + b
         for i in range(output_size):
-            # YOUR CODE HERE
-            pass
+            rhs = 0
+            for j in range(len(input_vars)):
+                rhs += weight[i][j] * input_vars[j]
+            self.gurobi_model.addConstr(z[i] == rhs + bias[i])
         self.gurobi_model.update()
         print(f"Created linear layer with input shape {input_size} output shape {output_size}")
         return z.values()
@@ -103,7 +106,7 @@ class Verifier:
         n_inputs = len(upper_bounds)
         hatz_vars = self.gurobi_model.addVars(n_inputs)
         # Some p variables will not be used if that neuron is stable.
-        p_vars = self.gurobi_model.addVars(n_inputs, vtype=gurobipy.GRB.BINARY)
+        p_vars = self.gurobi_model.addVars(n_inputs, lb = 0, ub = 1, vtype=gurobipy.GRB.CONTINUOUS)
         self.gurobi_model.update()
 
         # TODO: Model ReLU activation as piecewise linear constraints in MIP.
@@ -112,8 +115,21 @@ class Verifier:
         # Hint - Use .addConstr() and Refer section 4.1 of the paper
         n_unstable = 0
         for i in range(n_inputs):
-            # YOUR CODE HERE
-            pass
+            if lower_bounds[i] <= upper_bounds[i] <= 0:
+                # inactive
+                self.gurobi_model.addConstr(hatz_vars[i] == 0)
+            
+            elif 0 <= lower_bounds[i] <= upper_bounds[i]:
+                # active
+                self.gurobi_model.addConstr(hatz_vars[i] == z[i])
+
+            elif lower_bounds[i] < 0 < upper_bounds[i]:
+                # unstable
+                n_unstable += 1
+                self.gurobi_model.addConstr(hatz_vars[i] <= z[i] - lower_bounds[i] * (1 - p_vars[i]))
+                self.gurobi_model.addConstr(hatz_vars[i] <= upper_bounds[i] * p_vars[i])
+                self.gurobi_model.addConstr(hatz_vars[i] >= z[i])
+                self.gurobi_model.addConstr(hatz_vars[i] >= 0)
 
         self.gurobi_model.update()
 
@@ -149,23 +165,23 @@ class Verifier:
             # Hint - direction can either be 'minimzation' or 'maximization' and use self.gurobi_model.setObjective
             if direction == 'minimization':
                 # YOUR CODE HERE
-                # self.gurobi_model.setObjective(...)
-                pass
+                self.gurobi_model.setObjective(objectives[i], gurobipy.GRB.MINIMIZE)
+
             elif direction == 'maximization':
                 # YOUR CODE HERE
-                pass
+                self.gurobi_model.setObjective(objectives[i], gurobipy.GRB.MAXIMIZE)
+
             else:
                 raise ValueError(direction)
             self.gurobi_model.optimize()
             # In production-ready code, you should can check for infeasible solutions, timeout, etc here.
             # TODO: Check if gurobi model is at optimal status
-            assert True # YOUR CODE HERE
+            assert self.gurobi_model.status == gurobipy.GRB.Status.OPTIMAL, f'Abnormal status, status code: {self.gurobi_model.status}' # YOUR CODE HERE
 
             optimal_objs.append(self.gurobi_model.objVal)
             optimal_vars.append([vars.X for vars in self.x_vars])
             time_elapsed = time.time() - start_time
-            print(
-                f'objective {i:3d} {direction} solved in {time_elapsed:8.3f} seconds, obj={self.gurobi_model.objVal:13.8g}')
+            print(f'objective {i:3d} {direction} solved in {time_elapsed:8.3f} seconds, obj={self.gurobi_model.objVal:13.8g}')
         return optimal_objs, optimal_vars
 
     def get_verification_objectives(self, y_vars, groundtruth_label):
@@ -192,12 +208,12 @@ class Verifier:
             target_labels.append(i)
             if i == groundtruth_label:
                 # YOUR CODE HERE
-                # objectives.append(...)
-                pass
+                objectives.append(None)
+                continue
             # Optimization objective we want to minimize.
             # TODO : append objective that needs to be minimized, think about the original label and the one after perturbation
             # YOUR CODE HERE
-            # objectives.append(...)
+            objectives.append(y_vars[groundtruth_label] - y_vars[i])
 
         return objectives, target_labels
 
@@ -246,7 +262,7 @@ def verify(model, input_image, groundtruth_label, perturbation):
             lbs, _ = v.solve_objectives(variables, direction='minimization')
             ubs, _ = v.solve_objectives(variables, direction='maximization')
             # After obtaining intermediate layer bounds, we can formulate the ReLU layer.
-            variables = v.add_relu_layer(variables, lbs, ubs)
+            variables = list(v.add_relu_layer(variables, lbs, ubs))
 
     # Create verification objectives.
     objectives, target_labels = v.get_verification_objectives(variables, groundtruth_label)
@@ -262,11 +278,10 @@ def verify(model, input_image, groundtruth_label, perturbation):
         # For LP, below we print a lower bound of the objective rather than the true minimum.
         print(f'Minimum y_{groundtruth_label} - y{r} = {optimal_objs[i]:13.8g}; calculated margin = {margin:13.8g}')
         # The assertion is for MIP only. For LP, this assertion should be removed.
-        assert abs(margin - optimal_objs[i]) < 1e-2
+        # assert abs(margin - optimal_objs[i]) < 1e-2
         if optimal_objs[i] <= 0:
             verified = False
-            print(
-                f'A counterexample found - with perturbation {perturbation} the label {r} has a score greater than groundtruth')
+            print(f'A counterexample found - with perturbation {perturbation} the label {r} has a score greater than groundtruth')
 
     return verified
 
@@ -275,11 +290,12 @@ if __name__ == '__main__':
     # Create the parser
     parser = argparse.ArgumentParser()
     # Add the 'data' argument
-    parser.add_argument('data_file', type=str, help='model input x_test loaded from file (e.g., data1.pth)')
+    parser.add_argument('--data_file', type=str, default = 'data1.pth',
+                        help='model input x_test loaded from file (e.g., data1.pth)')
     # Parse the command line arguments
     args = parser.parse_args()
     model, x_test, groundtruth_label = load_model_and_data(args.data_file)
     start_time = time.time()
-    result = verify(model, x_test, groundtruth_label, perturbation=0.01)
+    result = verify(model, x_test, groundtruth_label, perturbation = 0.001)
     verification_time = time.time() - start_time
     print(f'Verification result: {result} in {verification_time} seconds')

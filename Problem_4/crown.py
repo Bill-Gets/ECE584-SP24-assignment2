@@ -154,7 +154,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-a', '--activation', default='relu', choices=['relu', 'hardtanh'],
                         type=str, help='Activation Function')
-    parser.add_argument('data_file', type=str, help='input data, a tensor saved as a .pth file.')
+    parser.add_argument('--data_file', type=str, default = 'data1.pth',
+                        help='input data, a tensor saved as a .pth file.')
     # Parse the command line arguments
     args = parser.parse_args()
 
