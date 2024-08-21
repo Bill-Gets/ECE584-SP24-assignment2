@@ -40,7 +40,7 @@ class BoundLinear(nn.Linear):
 
             ubias (tensor): The bias (for upper bound) produced by this layer.
 
-            lA( tensor): The new A for computing the lower bound after taking this layer into account.
+            lA(tensor): The new A for computing the lower bound after taking this layer into account.
 
             lbias (tensor): The bias (for lower bound) produced by this layer.
         """
@@ -48,7 +48,7 @@ class BoundLinear(nn.Linear):
         def _bound_oneside(last_A):
             if last_A is None:
                 return None, 0
-            # propagate A to the nest layer
+            # propagate A to the next layer
             next_A = last_A.matmul(self.weight)
             # compute the bias of this layer
             sum_bias = last_A.matmul(self.bias)
@@ -57,3 +57,4 @@ class BoundLinear(nn.Linear):
         uA, ubias = _bound_oneside(last_uA)
         lA, lbias = _bound_oneside(last_lA)
         return uA, ubias, lA, lbias
+        # first time return 0.weight, 0.bias, 0.weight, 0.bias

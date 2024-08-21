@@ -5,6 +5,8 @@ import torch.nn as nn
 class BoundHardTanh(nn.Hardtanh):
     def __init__(self):
         super(BoundHardTanh, self).__init__()
+        self.upper_u = None
+        self.lower_l = None
 
     @staticmethod
     def convert(act_layer):
@@ -21,7 +23,7 @@ class BoundHardTanh(nn.Hardtanh):
 
     def boundpropogate(self, last_uA, last_lA, start_node=None):
         """
-        Propagate upper and lower linear bounds through the HardTanh activation function
+        Propagate upper and lower linear bounds through the HardTannh activation function
         based on pre-activation bounds.
 
         Args:

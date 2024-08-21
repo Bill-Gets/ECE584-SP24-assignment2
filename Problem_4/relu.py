@@ -6,6 +6,8 @@ import torch.nn.functional as F
 class BoundReLU(nn.ReLU):
     def __init__(self, inplace=False):
         super(BoundReLU, self).__init__(inplace)
+        self.upper_u = None
+        self.lower_l = None
 
     @staticmethod
     def convert(act_layer):
