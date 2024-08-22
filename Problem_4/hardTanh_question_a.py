@@ -63,7 +63,10 @@ class BoundHardTanh(nn.Hardtanh):
         # Lower bound: lA is the coefficients, lbias is the bias.
 
         hatz_ub, hatz_lb = preact_ub.clamp(min = -1, max = 1), preact_lb.clamp(min = -1, max = 1)
-        upper_d = lower_d = (hatz_ub - hatz_lb) / (preact_ub - preact_lb).clamp(min = 1e-8)  # slope; avoid division by 0
+        upper_d_max = (hatz_ub - hatz_lb) / (hatz_ub - preact_lb).clamp(min = 1e-8)  # max slope; avoid division by 0
+        lower_d_max = (hatz_ub - hatz_lb) / (preact_ub - hatz_lb).clamp(min = 1e-8)  # max slope; avoid division by 0
+        upper_d = torch.where(preact_ub + preact_lb <= 2, upper_d_max, 0)  # slope
+        lower_d = torch.where(preact_ub + preact_lb >= -2, lower_d_max, 0)   # slope
         upper_b = hatz_ub - upper_d * hatz_ub  # intercept
         lower_b = hatz_lb - lower_d * hatz_lb  # intercept
 
