@@ -151,13 +151,14 @@
 	\begin{equation}
 	\begin{aligned}
 		y & \geqslant -\var{z}{1}{2} - \var{z}{1}{1} + \var{z}{2}{2} + \var{z}{2}{1}\\
-		& \geqslant -\frac{3}{4} \var{z}{1}{1} + \var{z}{2}{1} - \frac{11}{4} - \var{z}{1}{1} + 2 \var{z}{1}{1} - \frac{5}{4} \var{z}{2}{1} - \frac{7}{4} + \var{z}{2}{1}\\
-		& = \frac{1}{4} \var{z}{1}{1} + \frac{3}{4} \var{z}{2}{1} - \frac{9}{2}\\
-		& = \frac{1}{4} x_{1} - \frac{1}{4} x_{2} + 1 + \frac{3}{2} x_{1} - \frac{3}{2} x_{2} + 1 - \frac{9}{2}\\
-		& = \frac{7}{4} x_{1} - \frac{7}{4} x_{2} - \frac{5}{2}
+		& = \var{\hat{z}}{1}{1} - \var{\hat{z}}{2}{1} - \var{z}{1}{1} + \var{z}{2}{1}\\
+		& \geqslant \var{z}{1}{1} - \frac{5}{8} \var{z}{2}{1} - \frac{15}{8} - \var{z}{1}{1} + \var{z}{2}{1}\\
+		& = \frac{3}{8} \var{z}{2}{1} - \frac{15}{8}\\
+		& = \frac{3}{4} x_{1} - \frac{3}{4} x_{2} - \frac{3}{2}\\
+		& \geqslant -3
 	\end{aligned}
 	\end{equation}
-	Therefore, the CROWN lower bound on the output $y$ is $-6$.
+	Therefore, the CROWN lower bound on the output $y$ is $-3$.
 	
 \item We can use just $\var{\alpha}{1}{1}$, $\var{\alpha}{2}{1}$, and $\var{\alpha}{2}{2}$ to get the tightest possible lower bound. This is because we need only $\var{\alpha}{2}{2}$ to get the lower bound of $\var{z}{2}{2}$, and in the rest part, we need $\var{\alpha}{1}{1}$ and $\var{\alpha}{2}{1}$ to get the intermediate layer bounds. Specifically, suppose we have
 	\begin{equation}
